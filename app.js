@@ -24,12 +24,7 @@ app.use( async (req,res)=>{
         res.end('error')
     }
  }else if(req.method==='POST'){
-     // req.on('data',data=>{
-     //  console.log(data.toString())
-     // })
-     // // if(sha1Str!==signature){
-     //     res.send('err');
-     //     return;
+    
      const xmlData=await new Promise((resolve, reject) => {
              let xmlData="";
              req.on('data',data=>{
