@@ -1,9 +1,11 @@
 const express=require("express");
 const app=express();
 const sha1=require('sha1');
+const {parseString} = require('xml2js');
 
 
-app.use((req,res)=>{
+
+app.use( async (req,res)=>{
  console.log(req.query)
 
  const {signature,echostr,timestamp,nonce}=req.query;
@@ -17,23 +19,63 @@ app.use((req,res)=>{
  if(req.method==='GET'){
      //验证消息是否来自微信
     if(sha1Str===signature){
-        res.send('555')
+        res.end(echostr)
     } else{
-        res.send(err)
+        res.end('error')
     }
  }else if(req.method==='POST'){
-     req.on('data',data=>{
-      console.log(data.toString())
-     })
-     // if(sha1Str!==signature){
+     // req.on('data',data=>{
+     //  console.log(data.toString())
+     // })
+     // // if(sha1Str!==signature){
      //     res.send('err');
      //     return;
-     // }
+     const xmlData=await new Promise((resolve, reject) => {
+             let xmlData="";
+             req.on('data',data=>{
+             xmlData+=data.toString();
+             }).on('end',()=>{
+                 resolve(xmlData)
+             })
+         })
+         let jsData=null;
+         //xml数据转换json数据
+           parseString(xmlData, {trim: true}, function (err, result) {
+             if(!err){
+                 jsData=result;
+             }else{
+                 jsData={}
+             }
+         });
+         //格式化jsData
+         const {xml}=jsData;
+         let userData={};
+         for (let key in xml){
+             const value=xml[key];
+             //去掉数组
+             userData[key]=value[0];
+         }
+         let content="what are you talking about";
+         if(userData.Content==='1'){
+             content="are you kidding me";
+         }else if(userData.Content==='2'){
+             content="how are you";
+         }
+     let replyMessage = `<xml>
+      <ToUserName><![CDATA[${userData.FromUserName}]]></ToUserName>
+      <FromUserName><![CDATA[${userData.ToUserName}]]></FromUserName>
+      <CreateTime>${Date.now()}</CreateTime>
+      <MsgType><![CDATA[text]]></MsgType>
+      <Content><![CDATA[${content}]]></Content>
+    </xml>`
+     res.send(replyMessage)
     }
     else {
      res.end('error')
  }
 //获取用户发过来的消息
+
+
 });
 app.listen(3000,err=>{
  if(!err){console.log('服务器连接成功')
